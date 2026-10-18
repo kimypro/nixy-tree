@@ -44,15 +44,20 @@ const T = {
   restart: 20000
 };
 
-const MAX_BRANCH = 1500;
-const MAX_LEAF = 800;
+const MAX_BRANCH = 1800;
+const MAX_LEAF = 2400;
 const SNOW_STEP = 24;
+const SPRITE = 64;
 
-let branches = [], leaves = [], wordPts = [], glowSprites = {};
+let branches = [], leaves = [], wordPts = [];
+let glowSprites = {}, leafSprites = {};
 let groundPts = [], dirtDots = [], dirtPatches = [], stars = [];
 let snowBack = [], snowFront = [];
+let skyGrad = null;
 let base = { x: 0, y: 0 };
 let wordFont = '', t0 = 0, lastNow = 0, ready = false;
+
+let fpsSum = 0, fpsN = 0, fpsChecked = false;
 
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -65,15 +70,48 @@ function initGlow() {
   glowSprites = {};
   for (const col of PAL) {
     const s = document.createElement('canvas');
-    s.width = s.height = 64;
+    s.width = s.height = SPRITE;
     const g = s.getContext('2d');
     const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
     grad.addColorStop(0, col);
     grad.addColorStop(0.35, col + 'aa');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = grad;
-    g.fillRect(0, 0, 64, 64);
+    g.fillRect(0, 0, SPRITE, SPRITE);
     glowSprites[col] = s;
+  }
+}
+
+function buildLeafSprites() {
+  leafSprites = {};
+  for (const col of PAL) {
+    const arr = [];
+    for (let k = 0; k < 8; k++) {
+      const c = document.createElement('canvas');
+      c.width = c.height = SPRITE;
+      const g = c.getContext('2d');
+      g.translate(SPRITE / 2, SPRITE / 2);
+      g.rotate(k * Math.PI / 4);
+      const grad = g.createRadialGradient(0, 0, 0, 0, 0, 26);
+      grad.addColorStop(0, col);
+      grad.addColorStop(0.4, col + 'aa');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(0, 0, 26, 0, 6.283);
+      g.fill();
+      g.beginPath();
+      g.ellipse(0, 0, 10, 5.5, 0, 0, 6.283);
+      g.fillStyle = col;
+      g.fill();
+      g.globalAlpha = 0.6;
+      g.beginPath();
+      g.ellipse(-2, -1.2, 4.5, 2.4, 0, 0, 6.283);
+      g.fillStyle = '#ffffff';
+      g.fill();
+      arr.push(c);
+    }
+    leafSprites[col] = arr;
   }
 }
 
@@ -93,50 +131,43 @@ function buildGround() {
   }
 
   dirtDots = [];
-  for (let i = 0; i < 420; i++) {
+  for (let i = 0; i < 380; i++) {
     const x = Math.random() * W;
     const top = groundYAt(x) + 5;
     if (top >= H - 4) continue;
     dirtDots.push({
       x, y: rnd(top, H - 3),
       r: rnd(1, 3.4),
-      c: Math.random() < 0.5 ? 'rgba(26,15,8,0.85)' : 'rgba(96,64,38,0.7)'
+      c: Math.random() < 0.5 ? 0 : 1
     });
   }
 
   dirtPatches = [];
   for (let i = 0; i < 26; i++) {
     const x = rnd(W * 0.03, W * 0.97);
-    dirtPatches.push({
-      x, y: groundYAt(x) + rnd(1, 14),
-      rx: rnd(9, 30), ry: rnd(3.5, 9),
-      a: rnd(0.55, 0.95)
-    });
+    dirtPatches.push({ x, y: groundYAt(x) + rnd(1, 14), rx: rnd(9, 30), ry: rnd(3.5, 9) });
   }
 
   stars = [];
-  for (let i = 0; i < 70; i++) {
-    stars.push({
-      x: Math.random() * W,
-      y: Math.random() * H * 0.62,
-      r: rnd(0.5, 1.6),
-      a: rnd(0.15, 0.6),
-      ph: Math.random() * 6.28
-    });
+  for (let i = 0; i < 60; i++) {
+    stars.push({ x: Math.random() * W, y: Math.random() * H * 0.6, r: rnd(0.5, 1.6), a: rnd(0.15, 0.6), ph: Math.random() * 6.28 });
   }
+
+  skyGrad = ctx.createRadialGradient(W * 0.5, H * 0.95, 0, W * 0.5, H * 0.95, Math.max(W, H) * 0.72);
+  skyGrad.addColorStop(0, 'rgba(18,52,86,0.55)');
+  skyGrad.addColorStop(0.45, 'rgba(8,24,44,0.35)');
+  skyGrad.addColorStop(1, 'rgba(0,0,0,0)');
 }
 
 function makeFlakes(n, k) {
   const arr = [];
   for (let i = 0; i < n; i++) {
+    const a = rnd(0.3, 0.95) * k;
     arr.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: rnd(0.9, 4.2) * k,
-      sp: rnd(18, 105) * k,
-      drift: rnd(10, 42) * k,
-      ph: Math.random() * 6.28,
-      a: rnd(0.3, 0.95) * k
+      x: Math.random() * W, y: Math.random() * H,
+      r: rnd(0.9, 4.2) * k, sp: rnd(18, 105) * k, drift: rnd(10, 42) * k,
+      ph: Math.random() * 6.28, a: a,
+      b: a < 0.45 ? 0 : (a < 0.7 ? 1 : 2)
     });
   }
   return arr;
@@ -152,8 +183,8 @@ function addLeaf(x, y, depth) {
   leaves.push({
     x, y, depth,
     color: PAL[(Math.random() * PAL.length) | 0],
-    size: rnd(5.5, 9),
-    rot: Math.random() * Math.PI * 2,
+    size: rnd(6, 10.5),
+    rot: Math.random() * 6.283,
     spin: rnd(-4, 4),
     ph: Math.random() * Math.PI * 2,
     amp: rnd(5, 30),
@@ -178,7 +209,7 @@ function buildTree() {
     const y2 = y + Math.sin(ang) * len;
     branches.push({
       x, y, x2, y2, len, depth, t0: tt0, t1: tt1,
-      snow: rnd(1.3, 2.7), wob: rnd(0.7, 1.3)
+      snow: rnd(1.3, 2.7)
     });
 
     if (depth >= 8 || len < 10) { addLeaf(x2, y2, depth); return; }
@@ -198,6 +229,27 @@ function buildTree() {
   for (const b of branches) maxT = Math.max(maxT, b.t1);
   const scale = (T.growEnd - T.growStart) / maxT;
   for (const b of branches) { b.t0 = T.growStart + b.t0 * scale; b.t1 = T.growStart + b.t1 * scale; }
+
+  const tips = branches.filter(b => b.depth >= 6);
+  for (const b of tips) {
+    const k = 7 + ((Math.random() * 9) | 0);
+    for (let i = 0; i < k; i++) {
+      const a = Math.random() * 6.283;
+      const r = rnd(7, 36);
+      addLeaf(b.x2 + Math.cos(a) * r, b.y2 + Math.sin(a) * r * 0.85, b.depth);
+    }
+  }
+  const medios = branches.filter(b => b.depth === 5);
+  for (const b of medios) {
+    if (Math.random() > 0.6) continue;
+    const k = 3 + ((Math.random() * 5) | 0);
+    for (let i = 0; i < k; i++) {
+      const p = rnd(0.3, 1);
+      const a = Math.random() * 6.283;
+      const r = rnd(6, 24);
+      addLeaf(lerp(b.x, b.x2, p) + Math.cos(a) * r, lerp(b.y, b.y2, p) + Math.sin(a) * r * 0.85, b.depth);
+    }
+  }
 
   if (leaves.length < 380) {
     for (let i = 0; i < 500 && leaves.length < 520; i++) {
@@ -254,6 +306,7 @@ function buildWord() {
 
 function start() {
   initGlow();
+  buildLeafSprites();
   buildGround();
   buildSnow();
   buildTree();
@@ -261,7 +314,19 @@ function start() {
   ready = branches.length > 0 && leaves.length > 0;
   t0 = performance.now();
   lastNow = t0;
+  fpsSum = 0; fpsN = 0; fpsChecked = false;
 }
+
+function pruneLeaves() {
+  const avg = fpsN > 0 ? fpsN / fpsSum : 60;
+  fpsChecked = true;
+  if (avg >= 42) return;
+  const keep = avg < 26 ? 2 : 3;
+  leaves = leaves.filter((l, i) => i % keep !== 0);
+  logInfo('rendimiento bajo (fps ' + avg.toFixed(0) + '), hojas reducidas a ' + leaves.length);
+}
+
+function logInfo(m) { console.log(m); }
 
 function swayAt(t) {
   if (t < T.fallAt) return Math.sin(t * 0.0011) * 0.016;
@@ -275,21 +340,9 @@ function rot(px, py, ang) {
   return { x: base.x + dx * c - dy * s, y: base.y + dx * s + dy * c };
 }
 
-function line(x1, y1, x2, y2) {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-}
-
 function drawSky(t) {
-  const g = ctx.createRadialGradient(W * 0.5, H * 0.95, 0, W * 0.5, H * 0.95, Math.max(W, H) * 0.72);
-  g.addColorStop(0, 'rgba(18,52,86,0.55)');
-  g.addColorStop(0.45, 'rgba(8,24,44,0.35)');
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
+  ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, W, H);
-
   for (const s of stars) {
     const tw = 0.65 + Math.sin(t * 0.002 + s.ph) * 0.35;
     ctx.globalAlpha = s.a * tw;
@@ -301,18 +354,26 @@ function drawSky(t) {
   ctx.globalAlpha = 1;
 }
 
+const SNOW_A = [0.35, 0.6, 0.92];
+
 function updateAndDrawSnow(list, dt, t, col) {
   ctx.fillStyle = col;
-  for (const f of list) {
-    f.y += f.sp * dt;
-    f.x += Math.sin(t * 0.0009 + f.ph) * f.drift * dt;
-    if (f.y > H + 6) { f.y = -6; f.x = Math.random() * W; }
-    if (f.x > W + 8) f.x = -8;
-    else if (f.x < -8) f.x = W + 8;
-    ctx.globalAlpha = f.a;
+  for (let b = 0; b < 3; b++) {
+    ctx.globalAlpha = SNOW_A[b];
     ctx.beginPath();
-    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    ctx.fill();
+    let any = false;
+    for (const f of list) {
+      f.y += f.sp * dt;
+      f.x += Math.sin(t * 0.0009 + f.ph) * f.drift * dt;
+      if (f.y > H + 6) { f.y = -6; f.x = Math.random() * W; }
+      if (f.x > W + 8) f.x = -8;
+      else if (f.x < -8) f.x = W + 8;
+      if (f.b !== b) continue;
+      ctx.moveTo(f.x + f.r, f.y);
+      ctx.arc(f.x, f.y, f.r, 0, 6.283);
+      any = true;
+    }
+    if (any) ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
@@ -326,7 +387,6 @@ function drawSprout(t) {
   ctx.save();
   ctx.lineCap = 'round';
 
-  // semilla sobre la nieve
   ctx.globalAlpha = fade * 0.95;
   ctx.beginPath();
   ctx.ellipse(base.x, gy - 4, 9, 6.5, 0, 0, Math.PI * 2);
@@ -336,15 +396,14 @@ function drawSprout(t) {
   ctx.strokeStyle = '#39ff88';
   ctx.stroke();
 
-  // tallo
   const top = gy - H * 0.055 * p;
   ctx.globalAlpha = fade;
   ctx.lineWidth = 7;
   ctx.strokeStyle = 'rgba(57,255,136,0.25)';
-  line(base.x, gy - 4, base.x, top);
+  ctx.beginPath(); ctx.moveTo(base.x, gy - 4); ctx.lineTo(base.x, top); ctx.stroke();
   ctx.lineWidth = 2.8;
   ctx.strokeStyle = '#39ff88';
-  line(base.x, gy - 4, base.x, top);
+  ctx.beginPath(); ctx.moveTo(base.x, gy - 4); ctx.lineTo(base.x, top); ctx.stroke();
 
   if (p > 0.45) {
     const hp = clamp((p - 0.45) / 0.55, 0, 1);
@@ -363,6 +422,19 @@ function drawSprout(t) {
   ctx.restore();
 }
 
+function strokeSegs(segs, color, width, alpha) {
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i];
+    ctx.moveTo(s[0], s[1]);
+    ctx.lineTo(s[2], s[3]);
+  }
+  ctx.stroke();
+}
+
 function drawTree(t) {
   const ang = swayAt(t);
   ctx.save();
@@ -371,44 +443,66 @@ function drawTree(t) {
   ctx.translate(-base.x, -base.y);
   ctx.lineCap = 'round';
 
+  const buckets = [];
   for (const b of branches) {
     if (t < b.t0) continue;
     const p = clamp((t - b.t0) / (b.t1 - b.t0), 0, 1);
+    if (p <= 0) continue;
     const ex = lerp(b.x, b.x2, p);
     const ey = lerp(b.y, b.y2, p);
-    const w = Math.max(1.7, (9 - b.depth) * 2.0);
-    const hue = 175 + b.depth * 21;
+    let bk = buckets[b.depth];
+    if (!bk) bk = buckets[b.depth] = { segs: [], snow: [], tips: [], depth: b.depth };
+    bk.segs.push(b.x, b.y, ex, ey);
+    if (p > 0.25) bk.snow.push(b.x, b.y - b.snow, ex, ey - b.snow);
+    if (p < 1) bk.tips.push(ex, ey);
+  }
+
+  for (const bk of buckets) {
+    if (!bk) continue;
+    const w = Math.max(1.7, (9 - bk.depth) * 2.0);
+    const hue = 175 + bk.depth * 21;
     const col = 'hsl(' + hue + ',100%,55%)';
     const hot = 'hsl(' + hue + ',100%,84%)';
+    const segs = bk.segs;
 
-    ctx.strokeStyle = col;
     ctx.globalAlpha = 0.22;
     ctx.lineWidth = w * 3.6;
-    line(b.x, b.y, ex, ey);
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+    for (let i = 0; i < segs.length; i += 4) { ctx.moveTo(segs[i], segs[i + 1]); ctx.lineTo(segs[i + 2], segs[i + 3]); }
+    ctx.stroke();
 
     ctx.globalAlpha = 0.95;
     ctx.lineWidth = w;
-    line(b.x, b.y, ex, ey);
+    ctx.beginPath();
+    for (let i = 0; i < segs.length; i += 4) { ctx.moveTo(segs[i], segs[i + 1]); ctx.lineTo(segs[i + 2], segs[i + 3]); }
+    ctx.stroke();
 
     ctx.globalAlpha = 1;
     ctx.lineWidth = Math.max(0.8, w * 0.3);
     ctx.strokeStyle = hot;
-    line(b.x, b.y, ex, ey);
+    ctx.beginPath();
+    for (let i = 0; i < segs.length; i += 4) { ctx.moveTo(segs[i], segs[i + 1]); ctx.lineTo(segs[i + 2], segs[i + 3]); }
+    ctx.stroke();
 
-    // nieve apoyada sobre la rama
-    if (p > 0.25) {
-      const sn = clamp((p - 0.25) / 0.5, 0, 1);
-      ctx.globalAlpha = 0.55 * sn;
-      ctx.strokeStyle = '#f2f9ff';
+    if (bk.snow.length) {
+      ctx.globalAlpha = 0.55;
       ctx.lineWidth = Math.max(1, w * 0.5);
-      line(b.x, b.y - b.snow, ex, ey - b.snow);
+      ctx.strokeStyle = '#f2f9ff';
+      ctx.beginPath();
+      const sn = bk.snow;
+      for (let i = 0; i < sn.length; i += 4) { ctx.moveTo(sn[i], sn[i + 1]); ctx.lineTo(sn[i + 2], sn[i + 3]); }
+      ctx.stroke();
     }
 
-    if (p > 0 && p < 1) {
+    if (bk.tips.length) {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = hot;
-      ctx.beginPath();
-      ctx.arc(ex, ey, w * 0.95, 0, Math.PI * 2);
+      const tp = bk.tips;
+      for (let i = 0; i < tp.length; i += 2) {
+        ctx.moveTo(tp[i] + w * 0.95, tp[i + 1]);
+        ctx.arc(tp[i], tp[i + 1], w * 0.95, 0, 6.283);
+      }
       ctx.fill();
     }
   }
@@ -419,7 +513,6 @@ function drawTree(t) {
 function drawGround() {
   if (groundPts.length < 2) return;
 
-  // tierra
   ctx.beginPath();
   ctx.moveTo(groundPts[0].x, groundPts[0].y);
   for (const p of groundPts) ctx.lineTo(p.x, p.y);
@@ -431,17 +524,21 @@ function drawGround() {
 
   ctx.save();
   ctx.clip();
-  for (const d of dirtDots) {
-    ctx.globalAlpha = d.c.indexOf('26') >= 0 ? 0.85 : 0.7;
-    ctx.fillStyle = d.c;
+  for (let c = 0; c < 2; c++) {
+    ctx.fillStyle = c === 0 ? 'rgba(26,15,8,0.85)' : 'rgba(96,64,38,0.7)';
     ctx.beginPath();
-    ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-    ctx.fill();
+    let any = false;
+    for (const d of dirtDots) {
+      if (d.c !== c) continue;
+      ctx.moveTo(d.x + d.r, d.y);
+      ctx.arc(d.x, d.y, d.r, 0, 6.283);
+      any = true;
+    }
+    if (any) ctx.fill();
   }
   ctx.restore();
   ctx.globalAlpha = 1;
 
-  // capa de nieve
   const A = -15, B = 6;
   ctx.beginPath();
   ctx.moveTo(0, groundPts[0].y + A);
@@ -455,7 +552,6 @@ function drawGround() {
   ctx.fillStyle = sg;
   ctx.fill();
 
-  // brillo frio del borde
   ctx.beginPath();
   ctx.moveTo(0, groundPts[0].y + A);
   for (const p of groundPts) ctx.lineTo(p.x, p.y + A);
@@ -463,64 +559,47 @@ function drawGround() {
   ctx.strokeStyle = 'rgba(160,225,255,0.9)';
   ctx.stroke();
 
-  // terrones de tierra asomando entre la nieve
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = '#4a3018';
+  ctx.beginPath();
   for (const d of dirtPatches) {
-    ctx.globalAlpha = d.a;
-    ctx.fillStyle = '#4a3018';
-    ctx.beginPath();
-    ctx.ellipse(d.x, d.y, d.rx, d.ry, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(d.x + d.rx, d.y);
+    ctx.ellipse(d.x, d.y, d.rx, d.ry, 0, 0, 6.283);
   }
+  ctx.fill();
   ctx.globalAlpha = 1;
 
-  // piedritas
   ctx.fillStyle = 'rgba(120,132,148,0.75)';
+  ctx.beginPath();
   for (let i = 0; i < 22; i++) {
-    const x = ((i * 137.5) % W);
+    const x = (i * 137.5) % W;
     const y = groundYAt(x) + 10 + ((i * 53) % 26);
     if (y > H - 2) continue;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 3 + (i % 3), 2 + (i % 2), 0, 0, Math.PI * 2);
-    ctx.fill();
+    const rx = 3 + (i % 3), ry = 2 + (i % 2);
+    ctx.moveTo(x + rx, y);
+    ctx.ellipse(x, y, rx, ry, 0, 0, 6.283);
   }
-}
-
-function drawLeaf(x, y, size, rot0, color, scale, alpha) {
-  const g = glowSprites[color];
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rot0);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = alpha * 0.85;
-  if (g) ctx.drawImage(g, -size * 2.4, -size * 2.4, size * 4.8, size * 4.8);
-  ctx.globalAlpha = alpha;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, size, size * 0.55, 0, 0, Math.PI * 2);
-  ctx.fillStyle = color;
   ctx.fill();
-  ctx.globalAlpha = alpha * 0.6;
-  ctx.beginPath();
-  ctx.ellipse(-size * 0.2, -size * 0.12, size * 0.45, size * 0.24, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.restore();
 }
 
 function drawLeaves(t) {
   const ang = swayAt(t);
   const wordScale = clamp(W * 0.00062, 0.5, 0.95);
+  let lastColor = null;
 
-  for (const l of leaves) {
+  for (let i = 0; i < leaves.length; i++) {
+    const l = leaves[i];
     if (t < l.bloomAt) continue;
     const bp = clamp((t - l.bloomAt) / l.bloomDur, 0, 1);
     const bloom = bp < 1 ? easeOutBack(bp) : 1;
     const pulse = 1 + Math.sin(t * 0.004 + l.ph) * 0.07;
 
-    let x, y, r, sc, alpha;
+    let x, y, rotv, sc, alpha;
 
     if (t < l.fallT0) {
       const p = rot(l.x, l.y, ang);
-      x = p.x; y = p.y; r = l.rot + Math.sin(t * 0.002 + l.ph) * 0.25;
+      x = p.x; y = p.y;
+      rotv = l.rot + Math.sin(t * 0.002 + l.ph) * 0.25;
       sc = bloom * pulse; alpha = bp;
     } else {
       if (!l.started) {
@@ -534,14 +613,14 @@ function drawLeaves(t) {
       if (u < 1) {
         y = lerp(l.sy, l.my, easeInQuad(u));
         x = lerp(l.sx, l.mx, u) + Math.sin(u * Math.PI * 2 + l.ph) * l.amp * (1 - u);
-        r = l.rot + u * l.spin;
+        rotv = l.rot + u * l.spin;
         sc = pulse; alpha = 1;
       } else {
         const v = clamp((t - l.fallT0 - l.fallDur) / l.settleDur, 0, 1);
         const e = easeOutCubic(v);
         x = lerp(l.mx, l.tx, e);
         y = lerp(l.my, l.ty, e);
-        r = lerp(l.rot + l.spin, l.finalRot, e);
+        rotv = lerp(l.rot + l.spin, l.finalRot, e);
         sc = lerp(pulse, wordScale, e);
         alpha = 1;
         if (v >= 1) {
@@ -550,7 +629,12 @@ function drawLeaves(t) {
         }
       }
     }
-    drawLeaf(x, y, l.size, r, l.color, sc, alpha);
+
+    const spr = leafSprites[l.color][((rotv / 6.283 * 8) | 0) & 7];
+    const s = (l.size * sc) * 6.4;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(spr, x - s / 2, y - s / 2, s, s);
+    lastColor = l.color;
   }
   ctx.globalAlpha = 1;
 }
@@ -578,11 +662,14 @@ function frame(now) {
   const dt = Math.min(0.05, (now - lastNow) / 1000);
   lastNow = now;
 
+  if (t > 1500 && t < 5000 && dt > 0) { fpsSum += dt; fpsN++; }
+  if (!fpsChecked && t >= 5200) pruneLeaves();
+
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
   drawSky(t);
-  updateAndDrawSnow(snowBack, dt, t, 'rgba(200,224,255,0.8)');
+  updateAndDrawSnow(snowBack, dt, t, 'rgba(200,224,255,1)');
 
   if (ready) {
     drawTree(t);
