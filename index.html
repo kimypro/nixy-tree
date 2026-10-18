@@ -6,9 +6,9 @@
 <style>
   html,body{margin:0;padding:0;background:#000;overflow:hidden;height:100%}
   canvas{display:block}
-  #hint{position:fixed;left:0;right:0;bottom:14px;text-align:center;
-        font:600 13px "Segoe UI",system-ui,sans-serif;color:#4ad6c8;
-        letter-spacing:2px;opacity:.55;pointer-events:none;text-transform:uppercase}
+  #hint{position:fixed;left:0;right:0;bottom:10px;text-align:center;
+        font:600 12px "Segoe UI",system-ui,sans-serif;color:#7fc6ff;
+        letter-spacing:2px;opacity:.5;pointer-events:none;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -34,25 +34,32 @@ function resize() {
 const PAL = ['#00f5ff', '#ff00d4', '#b6ff00', '#ff9b00', '#ff2d95', '#9d4bff', '#39ff88'];
 
 const T = {
-  sprout: 1000,
-  growStart: 1000,
-  growEnd: 5200,
-  bloomStart: 4300,
-  fallAt: 7600,
-  wordIn: 10600,
-  wordFull: 12400,
-  restart: 18500
+  sprout: 1100,
+  growStart: 1100,
+  growEnd: 6400,
+  bloomStart: 5200,
+  fallAt: 8600,
+  wordIn: 11600,
+  wordFull: 13400,
+  restart: 20000
 };
 
-let branches = [], leaves = [], wordPts = [], glowSprites = {}, base = { x: 0, y: 0 };
-let wordFont = '', t0 = 0, ready = false;
+const MAX_BRANCH = 1500;
+const MAX_LEAF = 800;
+const SNOW_STEP = 24;
+
+let branches = [], leaves = [], wordPts = [], glowSprites = {};
+let groundPts = [], dirtDots = [], dirtPatches = [], stars = [];
+let snowBack = [], snowFront = [];
+let base = { x: 0, y: 0 };
+let wordFont = '', t0 = 0, lastNow = 0, ready = false;
 
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeInQuad(t) { return t * t; }
-function easeOutBack(t) { const c = 1.5; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeOutBack(t) { const c = 1.5; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
 
 function initGlow() {
   glowSprites = {};
@@ -70,17 +77,88 @@ function initGlow() {
   }
 }
 
+function groundYAt(x) {
+  if (!groundPts.length) return H * 0.875;
+  const i = clamp(Math.floor(x / SNOW_STEP), 0, groundPts.length - 2);
+  const a = groundPts[i], b = groundPts[i + 1];
+  const t = (b.x - a.x) === 0 ? 0 : (x - a.x) / (b.x - a.x);
+  return lerp(a.y, b.y, t);
+}
+
+function buildGround() {
+  groundPts = [];
+  for (let x = 0; x <= W + SNOW_STEP; x += SNOW_STEP) {
+    const y = H * 0.875 + Math.sin(x * 0.0042) * 9 + Math.sin(x * 0.0135 + 1.7) * 5;
+    groundPts.push({ x, y });
+  }
+
+  dirtDots = [];
+  for (let i = 0; i < 420; i++) {
+    const x = Math.random() * W;
+    const top = groundYAt(x) + 5;
+    if (top >= H - 4) continue;
+    dirtDots.push({
+      x, y: rnd(top, H - 3),
+      r: rnd(1, 3.4),
+      c: Math.random() < 0.5 ? 'rgba(26,15,8,0.85)' : 'rgba(96,64,38,0.7)'
+    });
+  }
+
+  dirtPatches = [];
+  for (let i = 0; i < 26; i++) {
+    const x = rnd(W * 0.03, W * 0.97);
+    dirtPatches.push({
+      x, y: groundYAt(x) + rnd(1, 14),
+      rx: rnd(9, 30), ry: rnd(3.5, 9),
+      a: rnd(0.55, 0.95)
+    });
+  }
+
+  stars = [];
+  for (let i = 0; i < 70; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.62,
+      r: rnd(0.5, 1.6),
+      a: rnd(0.15, 0.6),
+      ph: Math.random() * 6.28
+    });
+  }
+}
+
+function makeFlakes(n, k) {
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    arr.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: rnd(0.9, 4.2) * k,
+      sp: rnd(18, 105) * k,
+      drift: rnd(10, 42) * k,
+      ph: Math.random() * 6.28,
+      a: rnd(0.3, 0.95) * k
+    });
+  }
+  return arr;
+}
+
+function buildSnow() {
+  snowBack = makeFlakes(170, 0.55);
+  snowFront = makeFlakes(130, 1);
+}
+
 function addLeaf(x, y, depth) {
+  if (leaves.length >= MAX_LEAF) return;
   leaves.push({
     x, y, depth,
     color: PAL[(Math.random() * PAL.length) | 0],
-    size: rnd(5, 8.5),
+    size: rnd(5.5, 9),
     rot: Math.random() * Math.PI * 2,
     spin: rnd(-4, 4),
     ph: Math.random() * Math.PI * 2,
-    amp: rnd(5, 28),
+    amp: rnd(5, 30),
     finalRot: rnd(-0.6, 0.6),
-    bloomAt: 0, bloomDur: 750,
+    bloomAt: 0, bloomDur: 800,
     fallT0: 0, fallDur: 0, settleDur: 0,
     sx: 0, sy: 0, mx: 0, my: 0, tx: 0, ty: 0,
     started: false
@@ -90,29 +168,31 @@ function addLeaf(x, y, depth) {
 function buildTree() {
   branches = [];
   leaves = [];
-  base = { x: W / 2, y: H * 0.93 };
+  base = { x: W / 2, y: groundYAt(W / 2) - 3 };
 
   function grow(x, y, ang, len, depth, tt0) {
-    if (branches.length > 1400) return;
-    const dur = 200 + len * 1.15;
+    if (branches.length > MAX_BRANCH) return;
+    const dur = 210 + len * 1.15;
     const tt1 = tt0 + dur;
     const x2 = x + Math.cos(ang) * len;
     const y2 = y + Math.sin(ang) * len;
-    branches.push({ x, y, x2, y2, len, depth, t0: tt0, t1: tt1 });
+    branches.push({
+      x, y, x2, y2, len, depth, t0: tt0, t1: tt1,
+      snow: rnd(1.3, 2.7), wob: rnd(0.7, 1.3)
+    });
 
-    if (depth >= 7 || len < 11) { addLeaf(x2, y2, depth); return; }
+    if (depth >= 8 || len < 10) { addLeaf(x2, y2, depth); return; }
+    if (depth >= 4 && Math.random() < 0.7) addLeaf(x2, y2, depth);
 
-    if (depth >= 4 && Math.random() < 0.65) addLeaf(x2, y2, depth);
-
-    const n = depth < 2 ? 2 : (Math.random() < 0.62 ? 2 : 3);
+    const n = depth < 2 ? 2 : (Math.random() < 0.6 ? 2 : 3);
+    const spread = 0.5 + depth * 0.09;
     for (let i = 0; i < n; i++) {
-      const spread = 0.5 + depth * 0.06;
-      const a = ang + rnd(-spread, spread) + (ang > -Math.PI / 2 ? 0.04 : -0.04);
-      grow(x2, y2, a, len * rnd(0.66, 0.82), depth + 1, tt0 + dur * 0.72);
+      const a = ang + rnd(-spread, spread) + (ang > -Math.PI / 2 ? 0.05 : -0.05);
+      grow(x2, y2, a, len * rnd(0.70, 0.79), depth + 1, tt0 + dur * 0.72);
     }
   }
 
-  grow(base.x, base.y, -Math.PI / 2, H * 0.15, 0, 0);
+  grow(base.x, base.y, -Math.PI / 2, H * 0.17, 0, 0);
 
   let maxT = 0;
   for (const b of branches) maxT = Math.max(maxT, b.t1);
@@ -120,18 +200,18 @@ function buildTree() {
   for (const b of branches) { b.t0 = T.growStart + b.t0 * scale; b.t1 = T.growStart + b.t1 * scale; }
 
   if (leaves.length < 380) {
-    for (let i = 0; i < 400 && leaves.length < 500; i++) {
+    for (let i = 0; i < 500 && leaves.length < 520; i++) {
       const b = branches[(Math.random() * branches.length) | 0];
-      if (b.depth < 3) continue;
+      if (!b || b.depth < 3) continue;
       const p = rnd(0.4, 1);
       addLeaf(lerp(b.x, b.x2, p), lerp(b.y, b.y2, p), b.depth);
     }
   }
 
   for (const l of leaves) {
-    l.bloomAt = T.bloomStart + rnd(0, 1500) + (l.depth >= 6 ? 400 : 0);
-    l.fallT0 = T.fallAt + rnd(0, 950);
-    l.fallDur = rnd(1400, 2000);
+    l.bloomAt = T.bloomStart + rnd(0, 1700) + (l.depth >= 6 ? 400 : 0);
+    l.fallT0 = T.fallAt + rnd(0, 1000);
+    l.fallDur = rnd(1500, 2100);
     l.settleDur = rnd(700, 1150);
   }
 }
@@ -147,7 +227,7 @@ function buildWord() {
   o.textAlign = 'center';
   o.textBaseline = 'middle';
   o.fillStyle = '#fff';
-  o.fillText('Nixy', W / 2, H * 0.56);
+  o.fillText('Nixy', W / 2, H * 0.54);
 
   const d = o.getImageData(0, 0, off.width, off.height).data;
   const pts = [];
@@ -174,16 +254,19 @@ function buildWord() {
 
 function start() {
   initGlow();
+  buildGround();
+  buildSnow();
   buildTree();
   buildWord();
   ready = branches.length > 0 && leaves.length > 0;
   t0 = performance.now();
+  lastNow = t0;
 }
 
 function swayAt(t) {
-  if (t < T.fallAt) return Math.sin(t * 0.0011) * 0.015;
-  const k = clamp((t - T.fallAt) / 1500, 0, 1);
-  return Math.sin(T.fallAt * 0.0011) * 0.015 * (1 - k);
+  if (t < T.fallAt) return Math.sin(t * 0.0011) * 0.016;
+  const k = clamp((t - T.fallAt) / 1600, 0, 1);
+  return Math.sin(T.fallAt * 0.0011) * 0.016 * (1 - k);
 }
 
 function rot(px, py, ang) {
@@ -199,42 +282,76 @@ function line(x1, y1, x2, y2) {
   ctx.stroke();
 }
 
+function drawSky(t) {
+  const g = ctx.createRadialGradient(W * 0.5, H * 0.95, 0, W * 0.5, H * 0.95, Math.max(W, H) * 0.72);
+  g.addColorStop(0, 'rgba(18,52,86,0.55)');
+  g.addColorStop(0.45, 'rgba(8,24,44,0.35)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  for (const s of stars) {
+    const tw = 0.65 + Math.sin(t * 0.002 + s.ph) * 0.35;
+    ctx.globalAlpha = s.a * tw;
+    ctx.fillStyle = '#dff1ff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function updateAndDrawSnow(list, dt, t, col) {
+  ctx.fillStyle = col;
+  for (const f of list) {
+    f.y += f.sp * dt;
+    f.x += Math.sin(t * 0.0009 + f.ph) * f.drift * dt;
+    if (f.y > H + 6) { f.y = -6; f.x = Math.random() * W; }
+    if (f.x > W + 8) f.x = -8;
+    else if (f.x < -8) f.x = W + 8;
+    ctx.globalAlpha = f.a;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawSprout(t) {
   const p = clamp(t / T.sprout, 0, 1);
-  const fade = 1 - clamp((t - 1300) / 900, 0, 1);
+  const fade = 1 - clamp((t - 1400) / 900, 0, 1);
   if (fade <= 0) return;
+  const gy = groundYAt(base.x) - 8;
 
   ctx.save();
-  ctx.globalAlpha = fade;
+  ctx.lineCap = 'round';
 
-  // semilla
+  // semilla sobre la nieve
+  ctx.globalAlpha = fade * 0.95;
   ctx.beginPath();
-  ctx.ellipse(base.x, base.y + 4, 9, 6, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#0d3b2e';
+  ctx.ellipse(base.x, gy - 4, 9, 6.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#241207';
   ctx.fill();
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.6;
   ctx.strokeStyle = '#39ff88';
-  ctx.globalAlpha = fade * 0.9;
   ctx.stroke();
 
   // tallo
-  const top = base.y - H * 0.05 * p;
+  const top = gy - H * 0.055 * p;
   ctx.globalAlpha = fade;
-  ctx.lineCap = 'round';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 7;
   ctx.strokeStyle = 'rgba(57,255,136,0.25)';
-  line(base.x, base.y, base.x, top);
-  ctx.lineWidth = 2.6;
+  line(base.x, gy - 4, base.x, top);
+  ctx.lineWidth = 2.8;
   ctx.strokeStyle = '#39ff88';
-  line(base.x, base.y, base.x, top);
+  line(base.x, gy - 4, base.x, top);
 
-  // dos hojitas
   if (p > 0.45) {
     const hp = clamp((p - 0.45) / 0.55, 0, 1);
-    const s = 7 * hp;
+    const s = 8 * hp;
     ctx.fillStyle = '#b6ff00';
     ctx.shadowColor = '#b6ff00';
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 14;
     ctx.beginPath();
     ctx.ellipse(base.x - s, top + s * 0.4, s, s * 0.5, -0.5, 0, Math.PI * 2);
     ctx.fill();
@@ -259,14 +376,14 @@ function drawTree(t) {
     const p = clamp((t - b.t0) / (b.t1 - b.t0), 0, 1);
     const ex = lerp(b.x, b.x2, p);
     const ey = lerp(b.y, b.y2, p);
-    const w = Math.max(1.4, (8 - b.depth) * 1.6);
-    const hue = 175 + b.depth * 22;
+    const w = Math.max(1.7, (9 - b.depth) * 2.0);
+    const hue = 175 + b.depth * 21;
     const col = 'hsl(' + hue + ',100%,55%)';
-    const hot = 'hsl(' + hue + ',100%,82%)';
+    const hot = 'hsl(' + hue + ',100%,84%)';
 
     ctx.strokeStyle = col;
-    ctx.globalAlpha = 0.20;
-    ctx.lineWidth = w * 3.4;
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = w * 3.6;
     line(b.x, b.y, ex, ey);
 
     ctx.globalAlpha = 0.95;
@@ -274,20 +391,98 @@ function drawTree(t) {
     line(b.x, b.y, ex, ey);
 
     ctx.globalAlpha = 1;
-    ctx.lineWidth = Math.max(0.8, w * 0.32);
+    ctx.lineWidth = Math.max(0.8, w * 0.3);
     ctx.strokeStyle = hot;
     line(b.x, b.y, ex, ey);
 
+    // nieve apoyada sobre la rama
+    if (p > 0.25) {
+      const sn = clamp((p - 0.25) / 0.5, 0, 1);
+      ctx.globalAlpha = 0.55 * sn;
+      ctx.strokeStyle = '#f2f9ff';
+      ctx.lineWidth = Math.max(1, w * 0.5);
+      line(b.x, b.y - b.snow, ex, ey - b.snow);
+    }
+
     if (p > 0 && p < 1) {
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = hot;
       ctx.beginPath();
-      ctx.arc(ex, ey, w * 0.9, 0, Math.PI * 2);
+      ctx.arc(ex, ey, w * 0.95, 0, Math.PI * 2);
       ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
   ctx.restore();
+}
+
+function drawGround() {
+  if (groundPts.length < 2) return;
+
+  // tierra
+  ctx.beginPath();
+  ctx.moveTo(groundPts[0].x, groundPts[0].y);
+  for (const p of groundPts) ctx.lineTo(p.x, p.y);
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fillStyle = '#3a2415';
+  ctx.fill();
+
+  ctx.save();
+  ctx.clip();
+  for (const d of dirtDots) {
+    ctx.globalAlpha = d.c.indexOf('26') >= 0 ? 0.85 : 0.7;
+    ctx.fillStyle = d.c;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+  // capa de nieve
+  const A = -15, B = 6;
+  ctx.beginPath();
+  ctx.moveTo(0, groundPts[0].y + A);
+  for (const p of groundPts) ctx.lineTo(p.x, p.y + A);
+  for (let i = groundPts.length - 1; i >= 0; i--) ctx.lineTo(groundPts[i].x, groundPts[i].y + B);
+  ctx.closePath();
+  const sg = ctx.createLinearGradient(0, H * 0.85, 0, H);
+  sg.addColorStop(0, '#ffffff');
+  sg.addColorStop(0.5, '#e8f3ff');
+  sg.addColorStop(1, '#bcd6ec');
+  ctx.fillStyle = sg;
+  ctx.fill();
+
+  // brillo frio del borde
+  ctx.beginPath();
+  ctx.moveTo(0, groundPts[0].y + A);
+  for (const p of groundPts) ctx.lineTo(p.x, p.y + A);
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = 'rgba(160,225,255,0.9)';
+  ctx.stroke();
+
+  // terrones de tierra asomando entre la nieve
+  for (const d of dirtPatches) {
+    ctx.globalAlpha = d.a;
+    ctx.fillStyle = '#4a3018';
+    ctx.beginPath();
+    ctx.ellipse(d.x, d.y, d.rx, d.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // piedritas
+  ctx.fillStyle = 'rgba(120,132,148,0.75)';
+  for (let i = 0; i < 22; i++) {
+    const x = ((i * 137.5) % W);
+    const y = groundYAt(x) + 10 + ((i * 53) % 26);
+    if (y > H - 2) continue;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3 + (i % 3), 2 + (i % 2), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawLeaf(x, y, size, rot0, color, scale, alpha) {
@@ -335,7 +530,6 @@ function drawLeaves(t) {
         l.mx = l.tx + rnd(-45, 45);
         l.my = Math.max(l.ty - rnd(55, 165), l.sy + 12);
       }
-
       const u = clamp((t - l.fallT0) / l.fallDur, 0, 1);
       if (u < 1) {
         y = lerp(l.sy, l.my, easeInQuad(u));
@@ -370,26 +564,35 @@ function drawWord(t) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = '#00f5ff';
-  ctx.shadowBlur = 40 * a;
+  ctx.shadowBlur = 45 * a;
   ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.004);
   ctx.strokeStyle = 'rgba(255,0,212,' + (0.75 * a) + ')';
-  ctx.strokeText('Nixy', W / 2, H * 0.56);
+  ctx.strokeText('Nixy', W / 2, H * 0.54);
   ctx.fillStyle = 'rgba(233,255,255,' + (0.20 * a) + ')';
-  ctx.fillText('Nixy', W / 2, H * 0.56);
+  ctx.fillText('Nixy', W / 2, H * 0.54);
   ctx.restore();
 }
 
 function frame(now) {
   const t = now - t0;
+  const dt = Math.min(0.05, (now - lastNow) / 1000);
+  lastNow = now;
+
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
+  drawSky(t);
+  updateAndDrawSnow(snowBack, dt, t, 'rgba(200,224,255,0.8)');
+
   if (ready) {
-    drawSprout(t);
     drawTree(t);
+    drawGround();
+    drawSprout(t);
     drawLeaves(t);
     drawWord(t);
   }
+
+  updateAndDrawSnow(snowFront, dt, t, '#ffffff');
 
   if (t > T.restart) { start(); return; }
   requestAnimationFrame(frame);
