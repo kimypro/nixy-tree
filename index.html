@@ -32,6 +32,7 @@ function resize() {
 }
 
 const PAL = ['#00f5ff', '#ff00d4', '#b6ff00', '#ff9b00', '#ff2d95', '#9d4bff', '#39ff88'];
+const NAME = 'Nixy';
 
 const T = {
   sprout: 1100,
@@ -273,13 +274,21 @@ function buildWord() {
   off.width = Math.floor(W);
   off.height = Math.floor(H);
   const o = off.getContext('2d');
-  const size = Math.min(W * 0.30, H * 0.44);
-  wordFont = 'italic 900 ' + size + 'px "Segoe UI", Arial, sans-serif';
-  o.font = wordFont;
+  let size = Math.min(W * 0.34, H * 0.46);
+  const setFont = () => {
+    wordFont = 'italic 900 ' + size + 'px "Segoe UI", Arial, sans-serif';
+    o.font = wordFont;
+  };
+  setFont();
+  const tw = o.measureText(NAME).width;
+  if (tw > 0 && tw > W * 0.86) {
+    size *= (W * 0.86) / tw;
+    setFont();
+  }
   o.textAlign = 'center';
   o.textBaseline = 'middle';
   o.fillStyle = '#fff';
-  o.fillText('Nixy', W / 2, H * 0.54);
+  o.fillText(NAME, W / 2, H * 0.54);
 
   const d = o.getImageData(0, 0, off.width, off.height).data;
   const pts = [];
@@ -695,9 +704,9 @@ function drawWord(t) {
   ctx.shadowBlur = 45 * a;
   ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.004);
   ctx.strokeStyle = 'rgba(255,0,212,' + (0.75 * a) + ')';
-  ctx.strokeText('Nixy', W / 2, H * 0.54);
+  ctx.strokeText(NAME, W / 2, H * 0.54);
   ctx.fillStyle = 'rgba(233,255,255,' + (0.20 * a) + ')';
-  ctx.fillText('Nixy', W / 2, H * 0.54);
+  ctx.fillText(NAME, W / 2, H * 0.54);
   ctx.restore();
 }
 
