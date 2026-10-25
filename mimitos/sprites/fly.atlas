@@ -1,0 +1,19 @@
+
+fly.png
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+images/effects/fly_body
+  rotate: false
+  xy: 46, 12
+  size: 25, 26
+  orig: 25, 26
+  offset: 0, 0
+  index: -1
+images/effects/fly_wing
+  rotate: false
+  xy: 0, 0
+  size: 44, 38
+  orig: 44, 38
+  offset: 0, 0
+  index: -1

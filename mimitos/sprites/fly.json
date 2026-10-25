@@ -1,0 +1,166 @@
+{
+"bones": [
+	{ "name": "root" },
+	{ "name": "body", "parent": "root", "length": 92.9, "x": -0.69, "y": 142.56, "rotation": 90.6 },
+	{ "name": "wing1", "parent": "body", "length": 96.63, "x": 1.26, "y": 0.25, "rotation": 42.69 },
+	{ "name": "wing2", "parent": "body", "length": 89.19, "x": 1.77, "y": -3.16, "rotation": -54.67 }
+],
+"slots": [
+	{ "name": "fly_wing2", "bone": "wing2", "attachment": "images/effects/fly_wing" },
+	{ "name": "fly_wing", "bone": "wing1", "attachment": "images/effects/fly_wing" },
+	{ "name": "fly_body", "bone": "body", "attachment": "images/effects/fly_body" }
+],
+"skins": {
+	"default": {
+		"fly_body": {
+			"images/effects/fly_body": { "rotation": -90.6, "width": 25, "height": 26 }
+		},
+		"fly_wing": {
+			"images/effects/fly_wing": { "x": 16.64, "y": 9.26, "rotation": -1.1, "width": 44, "height": 38 }
+		},
+		"fly_wing2": {
+			"images/effects/fly_wing": { "x": 21.12, "y": -5.64, "rotation": -29.12, "width": 44, "height": 38 }
+		}
+	}
+},
+"animations": {
+	"fly": {
+		"bones": {
+			"body": {
+				"rotate": [
+					{ "time": 0, "angle": 0, "curve": "stepped" },
+					{ "time": 0.1145, "angle": 0, "curve": "stepped" },
+					{ "time": 0.6666, "angle": 0 }
+				],
+				"translate": [
+					{
+						"time": 0,
+						"x": 0,
+						"y": 9.1,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.1145,
+						"x": 36.8,
+						"y": 41.05,
+						"curve": [ 0.276, 0, 0.621, 0.39 ]
+					},
+					{
+						"time": 0.2333,
+						"x": 5.83,
+						"y": 58.15,
+						"curve": [ 0.325, 0.3, 0.659, 0.64 ]
+					},
+					{
+						"time": 0.3479,
+						"x": -23.12,
+						"y": 59.47,
+						"curve": [ 0.333, 0.33, 0.666, 0.66 ]
+					},
+					{
+						"time": 0.4333,
+						"x": -37.57,
+						"y": 45.71,
+						"curve": [ 0.334, 0.33, 0.668, 0.67 ]
+					},
+					{
+						"time": 0.5479,
+						"x": -10.25,
+						"y": 27.43,
+						"curve": [ 0.336, 0.34, 0.67, 0.67 ]
+					},
+					{ "time": 0.6666, "x": 0, "y": 9.1 }
+				]
+			},
+			"wing1": {
+				"rotate": [
+					{
+						"time": 0,
+						"angle": -29.68,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.1145,
+						"angle": 88.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.2333,
+						"angle": -29.68,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.3479,
+						"angle": 88.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.4333,
+						"angle": -29.68,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.5479,
+						"angle": 88.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{ "time": 0.6666, "angle": -29.68 }
+				],
+				"translate": [
+					{ "time": 0, "x": -9.1, "y": 0.09 },
+					{ "time": 0.1145, "x": 8.74, "y": -0.09 },
+					{ "time": 0.2333, "x": -9.1, "y": 0.09 },
+					{ "time": 0.3479, "x": 8.74, "y": -0.09 },
+					{ "time": 0.4333, "x": -9.1, "y": 0.09 },
+					{ "time": 0.5479, "x": 8.74, "y": -0.09 },
+					{ "time": 0.6666, "x": -9.1, "y": 0.09 }
+				]
+			},
+			"wing2": {
+				"rotate": [
+					{
+						"time": 0,
+						"angle": 29.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.1145,
+						"angle": -89.85,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.2333,
+						"angle": 29.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.3479,
+						"angle": -89.85,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.4333,
+						"angle": 29.94,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{
+						"time": 0.5479,
+						"angle": -89.85,
+						"curve": [ 0.25, 0, 0.75, 1 ]
+					},
+					{ "time": 0.6666, "angle": 29.94 }
+				],
+				"translate": [
+					{ "time": 0, "x": -9.1, "y": 0.09 },
+					{ "time": 0.1145, "x": 8.74, "y": -0.09 },
+					{ "time": 0.2333, "x": -9.1, "y": 0.09 },
+					{ "time": 0.3479, "x": 8.74, "y": -0.09 },
+					{ "time": 0.4333, "x": -9.1, "y": 0.09 },
+					{ "time": 0.5479, "x": 8.74, "y": -0.09 },
+					{ "time": 0.6666, "x": -9.1, "y": 0.09 }
+				]
+			}
+		}
+	}
+}
+}

@@ -1,0 +1,134 @@
+
+skeleton0.5-1.png
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+fundido
+  rotate: false
+  xy: 0, 15
+  size: 500, 313
+  orig: 500, 313
+  offset: 0, 0
+  index: -1
+img__0000_rain1
+  rotate: false
+  xy: 0, 330
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0001_Layer-6
+  rotate: false
+  xy: 502, 680
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0001_rain2
+  rotate: false
+  xy: 502, 340
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0002_rain3
+  rotate: false
+  xy: 0, 670
+  size: 500, 348
+  orig: 500, 348
+  offset: 0, 0
+  index: -1
+img__0003_Folder-5
+  rotate: false
+  xy: 502, 0
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+
+skeleton0.5-2.png
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+img__0000_Layer-32
+  rotate: true
+  xy: 502, 29
+  size: 152, 420
+  orig: 176, 422
+  offset: 2, 2
+  index: -1
+img__0002_Layer-43
+  rotate: false
+  xy: 502, 401
+  size: 450, 277
+  orig: 450, 277
+  offset: 0, 0
+  index: -1
+img__0003_car
+  rotate: false
+  xy: 502, 183
+  size: 500, 216
+  orig: 500, 216
+  offset: 0, 0
+  index: -1
+img__0005_bg
+  rotate: false
+  xy: 0, 680
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0006_bg1
+  rotate: false
+  xy: 0, 340
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0006_bg2
+  rotate: false
+  xy: 502, 680
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+img__0006_bg3
+  rotate: false
+  xy: 0, 0
+  size: 500, 338
+  orig: 500, 338
+  offset: 0, 0
+  index: -1
+pupil__0000_Layer-2
+  rotate: true
+  xy: 924, 9
+  size: 172, 91
+  orig: 172, 91
+  offset: 0, 0
+  index: -1
+
+skeleton0.5-3.png
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+img__0004_Layer-1
+  rotate: false
+  xy: 0, 96
+  size: 312, 332
+  orig: 312, 332
+  offset: 0, 0
+  index: -1
+img__0005_people
+  rotate: false
+  xy: 314, 130
+  size: 218, 298
+  orig: 218, 298
+  offset: 0, 0
+  index: -1
+pupil__0001_Layer-1
+  rotate: false
+  xy: 0, 0
+  size: 178, 94
+  orig: 178, 94
+  offset: 0, 0
+  index: -1
