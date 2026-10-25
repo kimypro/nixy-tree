@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mimitos Gato Virtual - Remake 64-bit</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: linear-gradient(135deg, #1b0034 0%, #0d001a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 420px;
+            height: 750px;
+            background: rgba(20, 10, 35, 0.95);
+            border: 4px solid #ff00d4;
+            border-radius: 24px;
+            box-shadow: 0 0 30px rgba(255, 0, 212, 0.4);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .header {
+            padding: 15px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 2px solid rgba(255, 0, 212, 0.3);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            color: #00f5ff;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+        }
+        .stats {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+        .stat-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+        .bar-container {
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            background: #00f5ff;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+        .room {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #2a0845 0%, #120224 100%);
+        }
+        .cat-avatar {
+            font-size: 90px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            user-select: none;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
+        }
+        .cat-avatar:active {
+            transform: scale(1.15) rotate(5deg);
+        }
+        .speech {
+            position: absolute;
+            top: 20px;
+            background: #fff;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            animation: float 2s infinite ease-in-out;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .actions {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border-top: 2px solid rgba(255, 0, 212, 0.3);
+        }
+        .btn-action {
+            background: linear-gradient(135deg, #ff00d4 0%, #7b00ff 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 5px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.8rem;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255,0,212,0.4);
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0,245,255,0.8);
+            background: linear-gradient(135deg, #00f5ff 0%, #0077ff 100%);
+            color: #000;
+        }
+        .music-toggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #00f5ff;
+            color: #00f5ff;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="header">
+            <h1>🐱 Mimitos 64-bit</h1>
+        </div>
+        <button class="music-toggle" id="musicBtn" onclick="toggleMusic()">🎵</button>
+
+        <div class="stats">
+            <div class="stat-bar">
+                🍗 Hambre: <span id="hungerVal">100</span>%
+                <div class="bar-container"><div class="bar-fill" id="hungerBar" style="background:#00f5ff;"></div></div>
+            </div>
+            <div class="stat-bar">
+                ⚡ Energía: <span id="energyVal">100</span>%
+                <div class="bar-container"><div class="bar-fill" id="energyBar" style="background:#b6ff00;"></div></div>
+            </div>
+            <div class="stat-bar">
+                🎮 Diversión: <span id="funVal">100</span>%
+                <div class="bar-container"><div class="bar-fill" id="funBar" style="background:#ff9b00;"></div></div>
+            </div>
+            <div class="stat-bar">
+                ✨ Higiene: <span id="cleanVal">100</span>%
+                <div class="bar-container"><div class="bar-fill" id="cleanBar" style="background:#ff00d4;"></div></div>
+            </div>
+        </div>
+
+        <div class="room">
+            <div class="speech" id="speechBubble">¡Miau! ¡Hola humano! 🐾</div>
+            <div class="cat-avatar" id="cat" onclick="petCat()">🐱</div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-action" onclick="feedCat()">🍗 Alimentar</button>
+            <button class="btn-action" onclick="playCat()">🎮 Jugar</button>
+            <button class="btn-action" onclick="sleepCat()">💤 Dormir</button>
+            <button class="btn-action" onclick="cleanCat()">🛁 Bañar</button>
+        </div>
+    </div>
+
+    <audio id="bgm" src="bg_candy.mp3" loop></audio>
+
+    <script>
+        let state = {
+            hunger: 100,
+            energy: 100,
+            fun: 100,
+            clean: 100
+        };
+
+        const speechBubble = document.getElementById('speechBubble');
+        const cat = document.getElementById('cat');
+
+        function updateUI() {
+            document.getElementById('hungerVal').textContent = Math.round(state.hunger);
+            document.getElementById('hungerBar').style.width = state.hunger + '%';
+            
+            document.getElementById('energyVal').textContent = Math.round(state.energy);
+            document.getElementById('energyBar').style.width = state.energy + '%';
+            
+            document.getElementById('funVal').textContent = Math.round(state.fun);
+            document.getElementById('funBar').style.width = state.fun + '%';
+            
+            document.getElementById('cleanVal').textContent = Math.round(state.clean);
+            document.getElementById('cleanBar').style.width = state.clean + '%';
+        }
+
+        function setMood(text, emoji) {
+            speechBubble.textContent = text;
+            cat.textContent = emoji;
+            setTimeout(() => {
+                cat.textContent = '🐱';
+                speechBubble.textContent = '¡Purr... miau! 🐾';
+            }, 2500);
+        }
+
+        function petCat() {
+            state.fun = Math.min(100, state.fun + 5);
+            setMood('¡Prrr! Que rico 😻', '😽');
+            updateUI();
+        }
+
+        function feedCat() {
+            state.hunger = Math.min(100, state.hunger + 25);
+            setMood('¡Ñam ñam! Delicioso 🍗', '😺');
+            updateUI();
+        }
+
+        function playCat() {
+            if (state.energy < 15) {
+                setMood('¡Tengo sueño, zzz... 😴', '💤');
+                return;
+            }
+            state.fun = Math.min(100, state.fun + 30);
+            state.energy = Math.max(0, state.energy - 15);
+            setMood('¡Yupi! Qué divertido 🧶', '😸');
+            updateUI();
+        }
+
+        function sleepCat() {
+            state.energy = 100;
+            setMood('Zzz... Zzz... 💤', '😴');
+            updateUI();
+        }
+
+        function cleanCat() {
+            state.clean = 100;
+            setMood('¡Qué limpio y fresquito! ✨', '😻');
+            updateUI();
+        }
+
+        // Stat decay over time
+        setInterval(() => {
+            state.hunger = Math.max(0, state.hunger - 1);
+            state.energy = Math.max(0, state.energy - 0.5);
+            state.fun = Math.max(0, state.fun - 0.8);
+            state.clean = Math.max(0, state.clean - 0.6);
+            updateUI();
+        }, 3000);
+
+        let musicPlaying = false;
+        function toggleMusic() {
+            const bgm = document.getElementById('bgm');
+            const btn = document.getElementById('musicBtn');
+            if (musicPlaying) {
+                bgm.pause();
+                musicPlaying = false;
+                btn.textContent = '🎵';
+            } else {
+                bgm.play().then(() => {
+                    musicPlaying = true;
+                    btn.textContent = '🔊';
+                }).catch(e => console.log(e));
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
