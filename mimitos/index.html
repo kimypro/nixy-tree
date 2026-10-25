@@ -2,268 +2,353 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimitos Gato Virtual - Remake 64-bit</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mimitos Gato Virtual - Remake 64-bit Oficial</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body {
-            background: linear-gradient(135deg, #1b0034 0%, #0d001a 100%);
+            background: #0b0218;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #fff;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
         }
-        .game-container {
-            width: 100%;
-            max-width: 420px;
-            height: 750px;
-            background: rgba(20, 10, 35, 0.95);
-            border: 4px solid #ff00d4;
-            border-radius: 24px;
-            box-shadow: 0 0 30px rgba(255, 0, 212, 0.4);
+        .game-viewport {
+            width: 100vw;
+            height: 100vh;
+            max-width: 960px;
+            max-height: 540px;
+            background: #22053b;
+            position: relative;
+            box-shadow: 0 0 40px rgba(255,0,212,0.5);
             display: flex;
             flex-direction: column;
-            position: relative;
             overflow: hidden;
+            border: 3px solid #ff00d4;
         }
-        .header {
-            padding: 15px;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.4);
-            border-bottom: 2px solid rgba(255, 0, 212, 0.3);
+        /* Top Bar / Stats */
+        .top-bar {
+            height: 60px;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 2px solid rgba(255,0,212,0.3);
+            z-index: 10;
         }
-        .header h1 {
-            font-size: 1.5rem;
-            color: #00f5ff;
-            text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+        .stats-group {
+            display: flex;
+            gap: 15px;
         }
-        .stats {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            background: rgba(0,0,0,0.2);
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.75rem;
+            font-weight: bold;
         }
-        .stat-bar {
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            padding: 6px 10px;
-            font-size: 0.85rem;
-        }
-        .bar-container {
-            width: 100%;
-            height: 10px;
+        .stat-bar-bg {
+            width: 90px;
+            height: 12px;
             background: #333;
-            border-radius: 5px;
-            margin-top: 4px;
+            border-radius: 6px;
             overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+            margin-top: 3px;
         }
-        .bar-fill {
+        .stat-bar-fill {
             height: 100%;
             width: 100%;
             background: #00f5ff;
-            transition: width 0.3s ease, background 0.3s ease;
+            transition: width 0.3s ease;
         }
-        .room {
+        .coins {
+            font-size: 1.1rem;
+            color: #ffd700;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+        /* Room View */
+        .room-view {
             flex: 1;
             position: relative;
+            background: radial-gradient(circle, #3d0d59 0%, #170126 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle, #2a0845 0%, #120224 100%);
+            overflow: hidden;
         }
-        .cat-avatar {
-            font-size: 90px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            user-select: none;
-            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
-        }
-        .cat-avatar:active {
-            transform: scale(1.15) rotate(5deg);
-        }
-        .speech {
+        .room-bg {
             position: absolute;
-            top: 20px;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.35;
+        }
+        .cat-container {
+            position: relative;
+            z-index: 5;
+            text-align: center;
+            cursor: pointer;
+        }
+        .cat-img {
+            font-size: 120px;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+            transition: transform 0.15s ease;
+        }
+        .cat-img:active {
+            transform: scale(1.1) rotate(3deg);
+        }
+        .speech-bubble {
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
             background: #fff;
             color: #000;
-            padding: 8px 16px;
-            border-radius: 16px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            animation: float 2s infinite ease-in-out;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-        }
-        .actions {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.6);
-            border-top: 2px solid rgba(255, 0, 212, 0.3);
-        }
-        .btn-action {
-            background: linear-gradient(135deg, #ff00d4 0%, #7b00ff 100%);
-            border: none;
+            padding: 6px 14px;
             border-radius: 12px;
-            padding: 12px 5px;
-            color: #fff;
+            font-size: 0.85rem;
             font-weight: bold;
-            font-size: 0.8rem;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(255,0,212,0.4);
-            transition: all 0.2s ease;
-            text-align: center;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 15px rgba(0,245,255,0.8);
+        /* Bottom Menu */
+        .bottom-menu {
+            height: 75px;
+            background: rgba(10, 2, 20, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+            border-top: 2px solid rgba(0,245,255,0.4);
+            z-index: 10;
+        }
+        .menu-btn {
+            background: linear-gradient(135deg, #ff00d4 0%, #7b00ff 100%);
+            border: 2px solid #fff;
+            border-radius: 16px;
+            width: 60px;
+            height: 55px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255,0,212,0.5);
+            transition: all 0.2s ease;
+        }
+        .menu-btn:hover {
+            transform: translateY(-3px);
             background: linear-gradient(135deg, #00f5ff 0%, #0077ff 100%);
             color: #000;
+            border-color: #00f5ff;
         }
-        .music-toggle {
+        .menu-btn span {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        /* Music Toggle */
+        .music-btn {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(0,0,0,0.6);
+            top: 75px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
             border: 2px solid #00f5ff;
             color: #00f5ff;
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            z-index: 10;
+            z-index: 20;
+            font-size: 18px;
+        }
+        /* Minigame Overlay */
+        .minigame-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .bug {
+            position: absolute;
+            font-size: 40px;
+            cursor: pointer;
+            animation: moveBug 2s infinite alternate ease-in-out;
+        }
+        @keyframes moveBug {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, -40px); }
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <div class="header">
-            <h1>🐱 Mimitos 64-bit</h1>
-        </div>
-        <button class="music-toggle" id="musicBtn" onclick="toggleMusic()">🎵</button>
+    <div class="game-viewport">
+        <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
 
-        <div class="stats">
-            <div class="stat-bar">
-                🍗 Hambre: <span id="hungerVal">100</span>%
-                <div class="bar-container"><div class="bar-fill" id="hungerBar" style="background:#00f5ff;"></div></div>
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="stats-group">
+                <div class="stat-item">
+                    🍗 Hambre <div class="stat-bar-bg"><div class="stat-bar-fill" id="barHunger" style="background:#00f5ff;"></div></div>
+                </div>
+                <div class="stat-item">
+                    ⚡ Energía <div class="stat-bar-bg"><div class="stat-bar-fill" id="barEnergy" style="background:#b6ff00;"></div></div>
+                </div>
+                <div class="stat-item">
+                    🎮 Diversión <div class="stat-bar-bg"><div class="stat-bar-fill" id="barFun" style="background:#ff9b00;"></div></div>
+                </div>
+                <div class="stat-item">
+                    ✨ Higiene <div class="stat-bar-bg"><div class="stat-bar-fill" id="barClean" style="background:#ff00d4;"></div></div>
+                </div>
             </div>
-            <div class="stat-bar">
-                ⚡ Energía: <span id="energyVal">100</span>%
-                <div class="bar-container"><div class="bar-fill" id="energyBar" style="background:#b6ff00;"></div></div>
-            </div>
-            <div class="stat-bar">
-                🎮 Diversión: <span id="funVal">100</span>%
-                <div class="bar-container"><div class="bar-fill" id="funBar" style="background:#ff9b00;"></div></div>
-            </div>
-            <div class="stat-bar">
-                ✨ Higiene: <span id="cleanVal">100</span>%
-                <div class="bar-container"><div class="bar-fill" id="cleanBar" style="background:#ff00d4;"></div></div>
-            </div>
+            <div class="coins" id="coinsDisplay">🪙 500</div>
         </div>
 
-        <div class="room">
-            <div class="speech" id="speechBubble">¡Miau! ¡Hola humano! 🐾</div>
-            <div class="cat-avatar" id="cat" onclick="petCat()">🐱</div>
+        <!-- Room View -->
+        <div class="room-view" id="roomView">
+            <div class="cat-container" onclick="petCat()">
+                <div class="speech-bubble" id="speech">¡Miau! Bienvenid@ 🐾</div>
+                <div class="cat-img" id="catEmoji">🐱</div>
+            </div>
         </div>
 
-        <div class="actions">
-            <button class="btn-action" onclick="feedCat()">🍗 Alimentar</button>
-            <button class="btn-action" onclick="playCat()">🎮 Jugar</button>
-            <button class="btn-action" onclick="sleepCat()">💤 Dormir</button>
-            <button class="btn-action" onclick="cleanCat()">🛁 Bañar</button>
+        <!-- Bottom Menu -->
+        <div class="bottom-menu">
+            <div class="menu-btn" onclick="changeRoom('kitchen')"><span>🍗</span>Cocina</div>
+            <div class="menu-btn" onclick="changeRoom('bedroom')"><span>🛏️</span>Dormitorio</div>
+            <div class="menu-btn" onclick="changeRoom('bathroom')"><span>🛁</span>Baño</div>
+            <div class="menu-btn" onclick="startMinigame()"><span>🕹️</span>Minijuego</div>
+            <div class="menu-btn" onclick="openShop()"><span>🎩</span>Tienda</div>
+        </div>
+
+        <!-- Minigame Overlay -->
+        <div class="minigame-overlay" id="minigameOverlay">
+            <h2 style="color:#00f5ff; margin-bottom:15px;">¡Aplasta los bichos! 🐞</h2>
+            <p style="margin-bottom:20px; font-size:0.9rem;">Puntuación: <span id="bugScore">0</span></p>
+            <div id="bugArea" style="width:80%; height:60%; position:relative; border:2px dashed rgba(255,255,255,0.3); border-radius:12px;"></div>
+            <button onclick="closeMinigame()" style="margin-top:20px; padding:10px 20px; background:#ff00d4; border:none; color:#fff; font-weight:bold; border-radius:8px; cursor:pointer;">Salir</button>
         </div>
     </div>
 
     <audio id="bgm" src="bg_candy.mp3" loop></audio>
 
     <script>
-        let state = {
-            hunger: 100,
-            energy: 100,
-            fun: 100,
-            clean: 100
+        let game = {
+            hunger: 90,
+            energy: 85,
+            fun: 80,
+            clean: 95,
+            coins: 500,
+            room: 'living'
         };
 
-        const speechBubble = document.getElementById('speechBubble');
-        const cat = document.getElementById('cat');
+        const speech = document.getElementById('speech');
+        const catEmoji = document.getElementById('catEmoji');
 
         function updateUI() {
-            document.getElementById('hungerVal').textContent = Math.round(state.hunger);
-            document.getElementById('hungerBar').style.width = state.hunger + '%';
-            
-            document.getElementById('energyVal').textContent = Math.round(state.energy);
-            document.getElementById('energyBar').style.width = state.energy + '%';
-            
-            document.getElementById('funVal').textContent = Math.round(state.fun);
-            document.getElementById('funBar').style.width = state.fun + '%';
-            
-            document.getElementById('cleanVal').textContent = Math.round(state.clean);
-            document.getElementById('cleanBar').style.width = state.clean + '%';
+            document.getElementById('barHunger').style.width = game.hunger + '%';
+            document.getElementById('barEnergy').style.width = game.energy + '%';
+            document.getElementById('barFun').style.width = game.fun + '%';
+            document.getElementById('barClean').style.width = game.clean + '%';
+            document.getElementById('coinsDisplay').textContent = '🪙 ' + game.coins;
         }
 
-        function setMood(text, emoji) {
-            speechBubble.textContent = text;
-            cat.textContent = emoji;
+        function setMsg(msg, emoji = '🐱') {
+            speech.textContent = msg;
+            catEmoji.textContent = emoji;
             setTimeout(() => {
-                cat.textContent = '🐱';
-                speechBubble.textContent = '¡Purr... miau! 🐾';
+                catEmoji.textContent = '🐱';
+                speech.textContent = '¡Purr... miau! 🐾';
             }, 2500);
         }
 
         function petCat() {
-            state.fun = Math.min(100, state.fun + 5);
-            setMood('¡Prrr! Que rico 😻', '😽');
+            game.fun = Math.min(100, game.fun + 5);
+            setMsg('¡Prrr! Que cariñoso 😻', '😽');
             updateUI();
         }
 
-        function feedCat() {
-            state.hunger = Math.min(100, state.hunger + 25);
-            setMood('¡Ñam ñam! Delicioso 🍗', '😺');
-            updateUI();
-        }
-
-        function playCat() {
-            if (state.energy < 15) {
-                setMood('¡Tengo sueño, zzz... 😴', '💤');
-                return;
+        function changeRoom(roomName) {
+            game.room = roomName;
+            const roomView = document.getElementById('roomView');
+            if (roomName === 'kitchen') {
+                roomView.style.background = 'radial-gradient(circle, #59350d 0%, #261501 100%)';
+                setMsg('¡Hora de comer! 🍗', '😺');
+                game.hunger = Math.min(100, game.hunger + 20);
+                game.coins += 10;
+            } else if (roomName === 'bedroom') {
+                roomView.style.background = 'radial-gradient(circle, #0d3859 0%, #011526 100%)';
+                setMsg('Zzz... A dormir 🛏️', '😴');
+                game.energy = 100;
+            } else if (roomName === 'bathroom') {
+                roomView.style.background = 'radial-gradient(circle, #0d594b 0%, #01261f 100%)';
+                setMsg('¡Bañito fresquito! 🛁', '😻');
+                game.clean = 100;
+            } else {
+                roomView.style.background = 'radial-gradient(circle, #3d0d59 0%, #170126 100%)';
+                setMsg('¡Qué bonita sala! 🛋️', '😸');
             }
-            state.fun = Math.min(100, state.fun + 30);
-            state.energy = Math.max(0, state.energy - 15);
-            setMood('¡Yupi! Qué divertido 🧶', '😸');
             updateUI();
         }
 
-        function sleepCat() {
-            state.energy = 100;
-            setMood('Zzz... Zzz... 💤', '😴');
+        let score = 0;
+        function startMinigame() {
+            document.getElementById('minigameOverlay').style.display = 'flex';
+            score = 0;
+            document.getElementById('bugScore').textContent = score;
+            spawnBug();
+        }
+
+        function spawnBug() {
+            const area = document.getElementById('bugArea');
+            area.innerHTML = '';
+            const bug = document.createElement('div');
+            bug.className = 'bug';
+            bug.textContent = '🐞';
+            bug.style.left = Math.random() * 80 + '%';
+            bug.style.top = Math.random() * 70 + '%';
+            bug.onclick = () => {
+                score += 50;
+                game.coins += 20;
+                game.fun = Math.min(100, game.fun + 15);
+                document.getElementById('bugScore').textContent = score;
+                updateUI();
+                spawnBug();
+            };
+            area.appendChild(bug);
+        }
+
+        function closeMinigame() {
+            document.getElementById('minigameOverlay').style.display = 'none';
             updateUI();
         }
 
-        function cleanCat() {
-            state.clean = 100;
-            setMood('¡Qué limpio y fresquito! ✨', '😻');
-            updateUI();
+        function openShop() {
+            alert('🎩 ¡Tienda de Sombreros y Ropa desbloqueada con 500 monedas!');
         }
 
-        // Stat decay over time
+        // Stats decrease over time
         setInterval(() => {
-            state.hunger = Math.max(0, state.hunger - 1);
-            state.energy = Math.max(0, state.energy - 0.5);
-            state.fun = Math.max(0, state.fun - 0.8);
-            state.clean = Math.max(0, state.clean - 0.6);
+            game.hunger = Math.max(0, game.hunger - 0.5);
+            game.energy = Math.max(0, game.energy - 0.3);
+            game.fun = Math.max(0, game.fun - 0.4);
+            game.clean = Math.max(0, game.clean - 0.3);
             updateUI();
         }, 3000);
 
