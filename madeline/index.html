@@ -995,7 +995,11 @@ function frame(now) {
     ctx.restore();
   }
 
-  if (t > T.restart) { start(); return; }
+  if (t > T.restart) {
+    start();
+    requestAnimationFrame(frame);
+    return;
+  }
   requestAnimationFrame(frame);
 }
 
