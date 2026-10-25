@@ -9,11 +9,24 @@
   #hint{position:fixed;left:0;right:0;bottom:10px;text-align:center;
         font:600 12px "Segoe UI",system-ui,sans-serif;color:#7fc6ff;
         letter-spacing:2px;opacity:.5;pointer-events:none;text-transform:uppercase}
+  #music-btn {
+    position: fixed; right: 20px; bottom: 20px; z-index: 999;
+    background: rgba(10, 15, 30, 0.8); border: 2px solid #00f5ff;
+    color: #00f5ff; width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; box-shadow: 0 0 15px rgba(0,245,255,0.4);
+    transition: all 0.3s ease; user-select: none;
+  }
+  #music-btn:hover { background: #00f5ff; color: #000; box-shadow: 0 0 25px #00f5ff; }
+  #music-btn.playing { border-color: #ff00d4; color: #ff00d4; box-shadow: 0 0 15px rgba(255,0,212,0.4); }
+  #music-btn.playing:hover { background: #ff00d4; color: #000; box-shadow: 0 0 25px #ff00d4; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hint">click o tecla R para repetir</div>
+<audio id="bgm" src="teeth.mp3" loop preload="auto"></audio>
+<div id="music-btn" title="Reproducir / Pausar Música">🎵</div>
 <script>
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
@@ -824,16 +837,141 @@ function drawWord(t) {
   ctx.globalAlpha = 1;
 }
 
+const poemLines = [
+  "Donde la noche florece...",
+  "y las estrellas brillan,",
+  "siempre hay un secreto..."
+];
+
+function drawPoem(t) {
+  if (t < 3500) return;
+  
+  const totalChars = poemLines.join('\n').length;
+  const p = clamp((t - 3500) / 6500, 0, 1);
+  const charsToShow = Math.floor(p * totalChars);
+
+  ctx.save();
+  
+  // Easter Egg 128 √e980 centrado arriba, cortado por un cuchillo láser y revelando I LOVE YOU
+  if (t > 6500) {
+    const alphaEgg = clamp((t - 6500) / 1500, 0, 1);
+    ctx.globalAlpha = alphaEgg * 0.9;
+    const cx = W / 2;
+    const cy = 45;
+
+    if (t > 15000 && t < 15500) {
+      // Destello del corte de cuchillo láser
+      const cutP = (t - 15000) / 500;
+      ctx.save();
+      ctx.strokeStyle = '#00f5ff';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = 25;
+      ctx.beginPath();
+      ctx.moveTo(cx - 200 + cutP * 400, cy - 25);
+      ctx.lineTo(cx - 180 + cutP * 400, cy + 25);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (t > 15300) {
+      const revealP = clamp((t - 15300) / 800, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alphaEgg * revealP;
+      ctx.shadowColor = '#ff00d4';
+      ctx.shadowBlur = 25 * revealP;
+      ctx.fillStyle = '#ff00d4';
+      ctx.font = '700 22px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('❤ I LOVE YOU ❤', cx, cy);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = '#00f5ff';
+      ctx.font = '600 20px monospace';
+      ctx.textAlign = 'center';
+
+      if (t > 14700) {
+        // Mitades separándose antes del corte
+        const splitOffset = (t - 14700) * 0.2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, cx, 100);
+        ctx.clip();
+        ctx.fillText('128 √e980', cx - splitOffset, cy);
+        ctx.restore();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(cx, 0, W - cx, 100);
+        ctx.clip();
+        ctx.fillText('128 √e980', cx + splitOffset, cy);
+        ctx.restore();
+      } else {
+        ctx.fillText('128 √e980', cx, cy);
+      }
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+  }
+
+  // Poema estilo máquina de escribir
+  let currentCount = 0;
+  let linesToDraw = [];
+  for (const line of poemLines) {
+    if (currentCount >= charsToShow) break;
+    const remaining = charsToShow - currentCount;
+    if (remaining >= line.length) {
+      linesToDraw.push(line);
+      currentCount += line.length + 1;
+    } else {
+      linesToDraw.push(line.substring(0, remaining));
+      currentCount += remaining;
+      break;
+    }
+  }
+
+  ctx.shadowColor = '#ff00d4';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#ff73e6';
+  ctx.font = '600 14px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+
+  let startY = H - 55 - (linesToDraw.length * 22);
+  for (let i = 0; i < linesToDraw.length; i++) {
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(linesToDraw[i], W / 2, startY + (i * 22));
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
 function frame(now) {
   const t = now - t0;
   const dt = Math.min(0.05, (now - lastNow) / 1000);
   lastNow = now;
+
+  let bass = 0;
+  if (!bgm.paused && musicStarted) {
+    bass = Math.max(0, Math.sin(t * 0.007)) * 0.5 + Math.max(0, Math.sin(t * 0.014)) * 0.3;
+  }
 
   if (t > 1500 && t < 5000 && dt > 0) { fpsSum += dt; fpsN++; }
   if (!fpsChecked && t >= 5200) pruneLeaves();
 
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
+
+  if (bass > 0.02) {
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    const sc = 1 + bass * 0.025;
+    ctx.scale(sc, sc);
+    ctx.translate(-W / 2, -H / 2);
+  }
 
   drawSky(t);
   drawMoon(t);
@@ -845,12 +983,17 @@ function frame(now) {
     drawSprout(t);
     drawLeaves(t);
     drawWord(t);
+    drawPoem(t);
   }
 
   updateFireworks(t, dt);
   drawFireworks(t);
 
   updateAndDrawSnow(snowFront, dt, t, '#ffffff');
+
+  if (bass > 0.04) {
+    ctx.restore();
+  }
 
   if (t > T.restart) { start(); return; }
   requestAnimationFrame(frame);
@@ -859,6 +1002,37 @@ function frame(now) {
 window.addEventListener('resize', resize);
 window.addEventListener('click', start);
 window.addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') start(); });
+
+const bgm = document.getElementById('bgm');
+const mBtn = document.getElementById('music-btn');
+let musicStarted = false;
+
+function toggleMusic(e) {
+  if (e) e.stopPropagation();
+  if (bgm.paused) {
+    bgm.play().then(() => {
+      musicStarted = true;
+      mBtn.classList.add('playing');
+      mBtn.textContent = '🔊';
+    }).catch(err => console.log("Error reproduciendo:", err));
+  } else {
+    bgm.pause();
+    mBtn.classList.remove('playing');
+    mBtn.textContent = '🎵';
+  }
+}
+
+mBtn.addEventListener('click', toggleMusic);
+
+window.addEventListener('click', () => {
+  if (!musicStarted) {
+    bgm.play().then(() => {
+      musicStarted = true;
+      mBtn.classList.add('playing');
+      mBtn.textContent = '🔊';
+    }).catch(() => {});
+  }
+}, { once: true });
 
 resize();
 requestAnimationFrame(frame);
